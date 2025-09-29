@@ -1,0 +1,60 @@
+# Dataset
+MURA-v1.1/
+
+# Generated partitions
+partitions/
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# Results and outputs
+results/
+logs/
+checkpoints/
+models/
+*.png
+*.jpg
+*.jpeg
+*.pdf
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# PyTorch
+*.pth
+*.pt
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
