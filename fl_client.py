@@ -17,9 +17,21 @@ import os
 class MuraClientDataset(Dataset):
     """Dataset for federated client - loads from partition CSV"""
     def __init__(self, csv_file, transform=None):
-        self.dataframe = pd.read_csv(csv_file)
-        self.transform = transform
+        df = pd.read_csv(csv_file)
         
+        if 'path' not in df.columns:
+            with open(csv_file, 'r') as f:
+                paths = [line.strip() for line in f.readlines()]
+                data = []
+            for path in paths:
+                label = 1 if 'positive' in path else 0
+                data.append({'path': path, 'label': label})
+            
+            self.dataframe = pd.DataFrame(data)
+        else:
+            self.dataframe = df
+            
+        self.transform = transform
     def __len__(self):
         return len(self.dataframe)
     
@@ -28,7 +40,12 @@ class MuraClientDataset(Dataset):
         img_path = row['path']
         label = int(row['label'])
         
-        image = Image.open(img_path).convert('RGB')
+        try:
+            image = Image.open(img_path).convert('RGB')
+        except Exception as e:
+            print(f"Warning: Skipping {img_path} ({e})")
+            image = Image.new("RGB", (224, 224), (0, 0, 0))
+
         if self.transform:
             image = self.transform(image)
             

@@ -20,6 +20,8 @@ def expand_study_to_images(input_csv, output_csv):
             print(f"Warning: Folder does not exist: {folder}")
             continue
         for file in os.listdir(folder):
+            if file.startswith("._"):
+                continue
             if file.lower().endswith((".png", ".jpg", ".jpeg")):
                 rows.append([os.path.join(folder, file), label])
 

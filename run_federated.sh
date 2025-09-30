@@ -4,11 +4,11 @@
 # Usage: ./run_federated.sh [iid|pathological_non_iid|label_skew]
 
 STRATEGY=${1:-iid}
-NUM_ROUNDS=10
-NUM_CLIENTS=7
-MIN_CLIENTS=7
-LOCAL_EPOCHS=2
-BATCH_SIZE=32
+NUM_ROUNDS=3
+NUM_CLIENTS=3
+MIN_CLIENTS=2
+LOCAL_EPOCHS=1
+BATCH_SIZE=64
 PORT=$(python -c "import socket; s=socket.socket(); s.bind(('',0)); print(s.getsockname()[1]); s.close()")
 SERVER_ADDRESS="localhost:$PORT"
 
