@@ -7,7 +7,9 @@ from torchvision.models import resnet18, ResNet18_Weights
 import argparse
 from typing import List, Tuple, Optional, Dict
 import numpy as np
-
+from flwr.common import ndarrays_to_parameters, parameters_to_ndarrays
+from flwr.server.client_proxy import ClientProxy
+from flwr.common import FitRes, Parameters
 
 def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
     """Aggregate metrics from multiple clients using weighted average"""
@@ -37,16 +39,36 @@ def get_initial_parameters():
 
 class SaveModelStrategy(FedAvg):
     """Custom strategy that saves the global model after each round"""
-    
+
     def __init__(self, save_path: str, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.save_path = save_path
         self.best_auc = 0.0
+        self.aggregated_parameters: Optional[Parameters] = None # Attribute to store params
+
+    def aggregate_fit(
+        self,
+        server_round: int,
+        results: List[Tuple[ClientProxy, FitRes]],
+        failures: List[BaseException],
+    ) -> Tuple[Optional[Parameters], Dict[str, fl.common.Scalar]]:
+        """Aggregate fit results and store the new global model parameters."""
         
+        # Call the parent aggregate_fit to perform the aggregation
+        aggregated_parameters, aggregated_metrics = super().aggregate_fit(
+            server_round, results, failures
+        )
+        
+        # Store the aggregated parameters
+        if aggregated_parameters is not None:
+            self.aggregated_parameters = aggregated_parameters
+            
+        return aggregated_parameters, aggregated_metrics
+
     def aggregate_evaluate(
         self,
         server_round: int,
-        results: List[Tuple[fl.server.client_proxy.ClientProxy, fl.common.EvaluateRes]],
+        results: List[Tuple[ClientProxy, fl.common.EvaluateRes]],
         failures: List[BaseException],
     ) -> Tuple[Optional[float], Dict[str, fl.common.Scalar]]:
         """Aggregate evaluation results and save best model"""
@@ -66,18 +88,24 @@ class SaveModelStrategy(FedAvg):
                 self.best_auc = current_auc
                 print(f"\n🎉 New best AUC: {self.best_auc:.4f} (Round {server_round})")
                 
-                # Save model weights
-                if hasattr(self, 'parameters'):
-                    # Convert parameters back to model state dict and save
+                # Check if we have parameters to save
+                if self.aggregated_parameters is not None:
+                    print("✅ Saving model...")
+                    
+                    # Convert `Parameters` to a list of NumPy arrays
+                    ndarrays = parameters_to_ndarrays(self.aggregated_parameters)
+                    
+                    # Create a new model instance and load the state
                     model = resnet18()
                     num_ftrs = model.fc.in_features
                     model.fc = nn.Sequential(nn.Dropout(p=0.3), nn.Linear(num_ftrs, 1))
                     
-                    params_dict = zip(model.state_dict().keys(), self.parameters)
+                    params_dict = zip(model.state_dict().keys(), ndarrays)
                     state_dict = {k: torch.tensor(v) for k, v in params_dict}
                     model.load_state_dict(state_dict, strict=True)
                     
-                    torch.save(state_dict, self.save_path)
+                    # Save the state_dict
+                    torch.save(model.state_dict(), self.save_path)
                     print(f"✅ Model saved to {self.save_path}")
         
         return loss_aggregated, metrics_aggregated
